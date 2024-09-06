@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Pedido</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Seu estilo CSS aqui, o mesmo que o usado no index.html */
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Editar Pedido</h1>
+        <form action="{{ url_for('editar_pedido', pedido_id=pedido.id) }}" method="post">
+            <div class="form-group">
+                <label for="cliente">Cliente:</label>
+                <input type="text" name="cliente" id="cliente" class="form-control" value="{{ pedido.cliente.nome }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="operador">Operador:</label>
+                <select name="operador" id="operador" class="form-control" required>
+                    {% for operador in operadores %}
+                        <option value="{{ operador.id }}" {% if operador.id == pedido.operador_id %}selected{% endif %}>
+                            {{ operador.nome }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Status:</label><br>
+                <button type="button" class="btn btn-success" onclick="setStatus('Concluído')">Concluído</button>
+                <button type="button" class="btn btn-warning" onclick="setStatus('Pendente')">Pendente</button>
+                <input type="hidden" name="status" id="status" value="{{ pedido.status }}">
+            </div>
+
+            <div class="form-group">
+                <label>Produtos:</label><br>
+                <div class="row">
+                    {% for produto in produtos %}
+                        <div class="col-md-4 mb-3">
+                            <div class="product-item">
+                                <div class="form-check d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <input type="checkbox" name="produtos" value="{{ produto.id }}" class="form-check-input" id="produto{{ produto.id }}"
+                                               {% if produto.id in quantidades %}checked{% endif %} onclick="toggleProduct('{{ produto.id }}')">
+                                        <label class="form-check-label" for="produto{{ produto.id }}">
+                                            {{ produto.nome }} - R$ {{ produto.preco }}
+                                        </label>
+                                    </div>
+                                    <div class="quantity-container" id="quantity-container-{{ produto.id }}" style="display: {% if produto.id in quantidades %}flex{% else %}none{% endif %};">
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-quantity btn-quantity-minus" onclick="adjustQuantity('quantidade{{ produto.id }}', -1)">-</button>
+                                            <input type="text" name="quantidade_{{ produto.id }}" id="quantidade{{ produto.id }}" class="form-control quantity-input mx-2" value="{{ quantidades[produto.id] if produto.id in quantidades else 0 }}" readonly>
+                                            <button type="button" class="btn btn-quantity btn-quantity-plus" onclick="adjustQuantity('quantidade{{ produto.id }}', 1)">+</button>
+                                        </div>
+                                        <input type="hidden" name="hidden_quantidade_{{ produto.id }}" id="hidden_quantidade{{ produto.id }}" value="{{ quantidades[produto.id] if produto.id in quantidades else 0 }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="button-row">
+                    <input type="hidden" name="quantidades" id="quantidades">
+                    <button type="submit" class="btn btn-primary" id="submit-button">Atualizar Pedido</button>
+                    <a href="{{ url_for('pedidos_anteriores') }}" class="btn btn-info">Cancelar</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Scripts do Bootstrap e JS customizado -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // Funções JavaScript para ajustar as quantidades e atualizar os campos escondidos
+        function adjustQuantity(inputId, adjustment) {
+            var quantityInput = document.getElementById(inputId);
+            var currentQuantity = parseInt(quantityInput.value);
+            var newQuantity = currentQuantity + adjustment;
+
+            if (newQuantity < 0) newQuantity = 0;
+
+            quantityInput.value = newQuantity;
+            document.getElementById('hidden_quantidade' + inputId.slice(10)).value = newQuantity;
+        }
+
+        function toggleProduct(productId) {
+            var checkbox = document.getElementById('produto' + productId);
+            var quantityContainer = document.getElementById('quantity-container-' + productId);
+            if (checkbox.checked) {
+                quantityContainer.style.display = 'flex';
+                document.getElementById('quantidade' + productId).value = 1;
+                document.getElementById('hidden_quantidade' + productId).value = 1;
+            } else {
+                quantityContainer.style.display = 'none';
+                document.getElementById('quantidade' + productId).value = 0;
+                document.getElementById('hidden_quantidade' + productId).value = 0;
+            }
+            updateQuantities();
+        }
+
+        function updateQuantities() {
+            var quantidades = [];
+            document.querySelectorAll('input[name^="quantidade_"]').forEach(function(input) {
+                if (parseInt(input.value) > 0) {
+                    quantidades.push(input.value);
+                }
+            });
+            document.getElementById('quantidades').value = quantidades.join(',');
+        }
+
+        function setStatus(status) {
+            document.getElementById('status').value = status;
+        
+            // Habilitar ou desabilitar campos e botões com base no status
+            var isConcluido = status === 'Concluído';
+            document.querySelectorAll('input[name="produtos"]').forEach(function(checkbox) {
+                checkbox.disabled = isConcluido;
+            });
+            document.querySelectorAll('.quantity-container').forEach(function(container) {
+                if (isConcluido) {
+                    container.style.display = 'none';
+                } else {
+                    container.style.display = 'flex';
+                }
+            });
+            document.getElementById('submit-button').disabled = isConcluido;
+        }
+        
+        // Inicializar o status no carregamento da página
+        document.addEventListener('DOMContentLoaded', function() {
+            var status = document.getElementById('status').value;
+            setStatus(status);
+        });
+        
+    </script>
+</body>
+</html>

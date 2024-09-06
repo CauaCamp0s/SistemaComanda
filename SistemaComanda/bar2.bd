@@ -1,0 +1,107 @@
+CREATE DATABASE bar2;
+USE bar2;
+
+CREATE TABLE operadors (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE produtos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    preco DECIMAL(10, 2) NOT NULL
+);
+
+CREATE TABLE clientes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    telefone VARCHAR(20),
+    email VARCHAR(100)
+);
+
+CREATE TABLE pedidos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    cliente_id INT,  -- Adicionado campo cliente_id
+    operador_id INT,
+    data DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('Pendente', 'Concluído') DEFAULT 'Pendente',
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id),  -- Adicionado relacionamento com cliente
+    FOREIGN KEY (operador_id) REFERENCES operadors(id)
+);
+
+CREATE TABLE pedidos_produtos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    pedido_id INT,
+    produto_id INT,
+    quantidade INT,
+    FOREIGN KEY (pedido_id) REFERENCES pedidos(id),
+    FOREIGN KEY (produto_id) REFERENCES produtos(id)
+);
+
+-- Inserindo itens na tabela produtos
+INSERT INTO produtos (nome, preco) VALUES
+('Temaki de Salmão', 22.50),
+('Temaki de Atum', 21.00),
+('Temaki de Frango Teriyaki', 20.00),
+('Temaki Vegano',  19.00),
+('Temaki de Camarão', 23.00),
+('Temaki de Unagi', 25.00),
+('Temaki de Manga e Salmão', 24.00),
+('Temaki de Peixe Branco', 21.50),
+('Temaki de Ebi Tempura', 22.00),
+('Temaki de Cucumber e Cream Cheese', 18.50),
+('Temaki de Salmão com Cream Cheese', 23.50),
+('Temaki de Avocado e Salmão', 22.00),
+('Temaki de Maionese de Wasabi', 20.50),
+('Temaki de Atum Picante', 24.00),
+('Temaki de Polvo', 25.50),
+('Temaki de Camarão com Abacate', 22.75),
+('Temaki de Frango Grelhado com Gergelim', 21.75),
+('Temaki de Shiitake com Tofu', 19.50),
+('Temaki de Salmão Defumado com Cebola Crispy', 24.50),
+('Temaki de Salmão com Manga e Gengibre', 23.00),
+('Temaki de Algas Marinhas e Tofu', 20.25),
+('Temaki de Atum com Cebola Roxa e Alho Frito', 22.75);
+
+-- Inserindo itens na tabela operadors
+INSERT INTO operadors (nome) VALUES
+('João Silva'),
+('Maria Oliveira'),
+('Pedro Santos'),
+('Ana Costa'),
+('Carlos Pereira'),
+('Lucia Almeida'),
+('Rafael Lima'),
+('Fernanda Sousa');
+
+-- Inserindo itens na tabela clientes (exemplo)
+INSERT INTO clientes (nome, telefone, email) VALUES
+('José da Silva', '123456789', 'jose@example.com'),
+('Mariana Lima', '987654321', 'mariana@example.com');
+
+-- Criando a View de Pedidos Anteriores
+CREATE OR REPLACE VIEW pedidos_anteriores AS
+SELECT 
+    p.id AS pedido_id,
+    c.nome AS cliente,
+    o.nome AS operador,
+    pr.nome AS produto,
+    pp.quantidade,
+    pr.preco AS valor_unitario,
+    (pr.preco * pp.quantidade) AS valor_total_produto,
+    (SELECT SUM(pr1.preco * pp1.quantidade) 
+     FROM pedidos_produtos pp1 
+     JOIN produtos pr1 ON pp1.produto_id = pr1.id 
+     WHERE pp1.pedido_id = p.id) AS valor_total_comanda
+FROM 
+    pedidos p
+JOIN 
+    clientes c ON p.cliente_id = c.id  -- Corrigido o join para usar cliente_id
+JOIN 
+    operadors o ON p.operador_id = o.id
+JOIN 
+    pedidos_produtos pp ON p.id = pp.pedido_id
+JOIN 
+    produtos pr ON pp.produto_id = pr.id
+WHERE 
+    p.status = 'Pendente';  -- Filtra apenas pedidos pendentes

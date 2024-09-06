@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comanda Bar</title>
+    <!-- Adicionando o Bootstrap -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .quantity-input {
+            width: 60px;
+            text-align: center;
+        }
+        .btn-quantity {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .btn-quantity-minus {
+            background-color: red;
+            color: white;
+        }
+        .btn-quantity-plus {
+            background-color: blue;
+            color: white;
+        }
+        .quantity-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        .btn-group {
+            display: flex;
+            align-items: center;
+        }
+        .product-item {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .button-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .button-row .btn {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Fazer Pedido</h1>
+        <form action="{{ url_for('fazer_pedido') }}" method="post">
+            <div class="form-group">
+                <label for="cliente">Cliente:</label>
+                <input type="text" name="cliente" id="cliente" class="form-control" placeholder="Digite o nome do cliente" required>
+            </div>
+        
+            <div class="form-group">
+                <label for="operador">Operador:</label>
+                <select name="operador" id="operador" class="form-control" required>
+                    {% for operador in operadores %}
+                        <option value="{{ operador.id }}">{{ operador.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        
+            <div class="form-group">
+                <label>Produtos:</label><br>
+                <div class="row">
+                    {% for produto in produtos %}
+                        <div class="col-md-4 mb-3">
+                            <div class="product-item">
+                                <div class="form-check d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <input type="checkbox" name="produtos" value="{{ produto.id }}" class="form-check-input" id="produto{{ produto.id }}" onclick="toggleProduct('{{ produto.id }}')">
+                                        <label class="form-check-label" for="produto{{ produto.id }}">
+                                            {{ produto.nome }} - R$ {{ produto.preco }}
+                                        </label>
+                                    </div>
+                                    <div class="quantity-container" id="quantity-container-{{ produto.id }}" style="display: none;">
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-quantity btn-quantity-minus" onclick="adjustQuantity('quantidade{{ produto.id }}', -1)">-</button>
+                                            <input type="text" name="quantidade_{{ produto.id }}" id="quantidade{{ produto.id }}" class="form-control quantity-input mx-2" value="0" readonly>
+                                            <button type="button" class="btn btn-quantity btn-quantity-plus" onclick="adjustQuantity('quantidade{{ produto.id }}', 1)">+</button>
+                                        </div>
+                                        <input type="hidden" name="hidden_quantidade_{{ produto.id }}" id="hidden_quantidade{{ produto.id }}" value="0">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="button-row">
+                    <button type="button" class="btn btn-success" data-toggle="modal" data-target="#cadastroModal">Cadastrar Novo Produto</button>
+                    <input type="hidden" name="quantidades" id="quantidades">
+                    <button type="submit" class="btn btn-primary">Fazer Pedido</button>
+                    <a href="{{ url_for('pedidos_anteriores') }}" class="btn btn-info">Ver Pedidos Anteriores</a>
+                </div>
+            </div>
+        </form>
+
+        <!-- Modal -->
+        <div class="modal fade" id="cadastroModal" tabindex="-1" role="dialog" aria-labelledby="cadastroModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="cadastroModalLabel">Cadastrar Novo Produto</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="form-cadastro-produto">
+                            <div class="form-group">
+                                <label for="nome">Nome do Produto:</label>
+                                <input type="text" class="form-control" id="nome" name="nome" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="preco">Preço:</label>
+                                <input type="number" class="form-control" id="preco" name="preco" step="0.01" required>
+                            </div>
+                            <div class="form-group">
+                                <div class="alert alert-danger d-none" id="error-message"></div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Salvar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Adicionando o JS do Bootstrap -->
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+        
+        <script>
+            function adjustQuantity(inputId, adjustment) {
+                var quantityInput = document.getElementById(inputId);
+                var currentQuantity = parseInt(quantityInput.value);
+                var newQuantity = currentQuantity + adjustment;
+
+                if (newQuantity < 0) newQuantity = 0; // Ensure minimum quantity is 0
+
+                quantityInput.value = newQuantity;
+                document.getElementById('hidden_quantidade' + inputId.slice(10)).value = newQuantity;
+            }
+
+            function toggleProduct(productId) {
+                var checkbox = document.getElementById('produto' + productId);
+                var quantityContainer = document.getElementById('quantity-container-' + productId);
+                if (checkbox.checked) {
+                    quantityContainer.style.display = 'flex';
+                    document.getElementById('quantidade' + productId).value = 1;
+                    document.getElementById('hidden_quantidade' + productId).value = 1;
+                } else {
+                    quantityContainer.style.display = 'none';
+                    document.getElementById('quantidade' + productId).value = 0;
+                    document.getElementById('hidden_quantidade' + productId).value = 0;
+                }
+                updateQuantities();
+            }
+
+            function updateQuantities() {
+                var quantidades = [];
+                document.querySelectorAll('input[name^="quantidade_"]').forEach(function(input) {
+                    if (parseInt(input.value) > 0) {
+                        quantidades.push(input.value);
+                    }
+                });
+                document.getElementById('quantidades').value = quantidades.join(',');
+            }
+
+            document.getElementById('form-cadastro-produto').addEventListener('submit', function(event) {
+                event.preventDefault();
+                var form = event.target;
+                var formData = new FormData(form);
+                fetch('/cadastrar_produto', {
+                    method: 'POST',
+                    body: formData
+                }).then(response => response.json())
+                  .then(data => {
+                      if (data.error) {
+                          document.getElementById('error-message').textContent = data.error;
+                          document.getElementById('error-message').classList.remove('d-none');
+                      } else {
+                          $('#cadastroModal').modal('hide');
+                          location.reload();  // Atualiza a página para mostrar o novo produto
+                      }
+                  });
+            });
+        </script>
+    </div>
+</body>
+</html>

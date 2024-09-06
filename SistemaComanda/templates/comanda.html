@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comanda</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        @media print {
+            @page {
+                size: 200mm;
+                margin: 0;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>"NOME_CLIENTE"</h1>
+        <p><strong>Cliente:</strong> {{ cliente.nome }}</p>
+        <p><strong>Operador:</strong> {{ operador.nome }}</p>
+        <p><strong>Data:</strong> {{ pedido.data }}</p>
+
+        <h3>Produtos</h3>
+        <ul>
+            {% for produto_pedido in produtos_pedido %}
+                {% set produto = produtos[produto_pedido.produto_id] %}
+                <li>{{ produto.nome }} - R$ {{ produto.preco }} x {{ produto_pedido.quantidade }} = R$ {{ produto.preco * produto_pedido.quantidade }}</li>
+            {% endfor %}
+        </ul>
+
+        <h3>Valor dos Produtos: R$ {{ total }}</h3>
+        <h3>Comissão: R$ {{ comissao }}</h3>
+        <h3>Total (Produtos + Comissão): R$ {{ total_completo }}</h3>
+
+        <button class="btn btn-primary no-print" onclick="window.print()">Imprimir</button>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary mt-2 no-print">Voltar</a>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
